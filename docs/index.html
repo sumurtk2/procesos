@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exposición a la IA de los Procesos Empresariales en España</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0f;
+  --bg2: #12121a;
+  --fg: #e0e0e8;
+  --fg2: #888894;
+  --sidebar-w: 220px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 20px 18px;
+  z-index: 10;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#sidebar h1 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+#sidebar .subtitle {
+  font-size: 11px;
+  color: var(--fg2);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.toggle-group {
+  display: flex;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.toggle-btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  background: transparent;
+  color: var(--fg2);
+  border: none;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.toggle-btn.active {
+  background: rgba(255,255,255,0.12);
+  color: var(--fg);
+}
+.toggle-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.04);
+}
+
+.stat-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-section h3 {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg2);
+}
+.stat-big {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--fg2);
+}
+
+.tier-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tier-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.tier-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.tier-name {
+  flex: 1;
+  color: var(--fg2);
+}
+.tier-procs {
+  text-align: right;
+  white-space: nowrap;
+}
+.tier-pct {
+  text-align: right;
+  width: 32px;
+  color: var(--fg2);
+  font-size: 10px;
+}
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 48px;
+}
+.histogram .bar {
+  flex: 1;
+  border-radius: 1px 1px 0 0;
+  min-height: 1px;
+  position: relative;
+}
+.hist-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--fg2);
+  margin-top: 2px;
+}
+
+.hbar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hbar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.hbar-label {
+  width: 68px;
+  flex-shrink: 0;
+  color: var(--fg2);
+  font-size: 10px;
+  text-align: right;
+}
+.hbar-track {
+  flex: 1;
+  height: 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.hbar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+.hbar-val {
+  width: 22px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--fg);
+  text-align: right;
+}
+
+.gradient-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--fg2);
+}
+.gradient-legend canvas {
+  border-radius: 2px;
+}
+
+canvas#canvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-w);
+  cursor: default;
+}
+
+#tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--bg2);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 380px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 20;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+#tooltip.visible { opacity: 1; }
+#tooltip .tt-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #fff;
+}
+#tooltip .tt-exposure {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+#tooltip .tt-stats {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 12px;
+  font-size: 12px;
+}
+#tooltip .tt-stats .label { color: var(--fg2); }
+#tooltip .tt-stats .value { color: var(--fg); text-align: right; }
+#tooltip .tt-rationale {
+  font-size: 11px;
+  color: var(--fg2);
+  margin-top: 8px;
+  line-height: 1.4;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 8px;
+}
+#tooltip .tt-rationale strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div>
+    <h1>Exposición a la IA de los Procesos Empresariales</h1>
+    <div class="subtitle">~120 procesos &middot; área = coste operativo &middot; color = exposición a la IA</div>
+  </div>
+
+  <div class="toggle-group">
+    <button class="toggle-btn active" data-mode="pyme" onclick="setMode('pyme')">PYME</button>
+    <button class="toggle-btn" data-mode="grande" onclick="setMode('grande')">Gran Empresa</button>
+  </div>
+
+  <div class="stat-section">
+    <h3>Total procesos</h3>
+    <div class="stat-big" id="statTotal">—</div>
+  </div>
+
+  <div class="stat-section">
+    <h3>Exposición media ponderada</h3>
+    <div class="stat-big" id="statAvgExposure">—</div>
+    <div class="stat-label">ponderada por coste, escala 0–10</div>
+  </div>
+
+  <div class="stat-section">
+    <h3>Coste por exposición</h3>
+    <div class="histogram" id="histogram"></div>
+    <div class="hist-labels"><span>0</span><span>5</span><span>10</span></div>
+  </div>
+
+  <div class="stat-section">
+    <h3>Desglose</h3>
+    <div class="tier-bar" id="tierBar"></div>
+  </div>
+
+  <div class="stat-section">
+    <h3>Exposición por área</h3>
+    <div class="hbar-chart" id="areaChart"></div>
+  </div>
+
+  <div class="stat-section">
+    <h3>Facilidad de implementación media</h3>
+    <div class="stat-big" id="statReadiness">—</div>
+    <div class="stat-label">ponderada por coste, escala 0–10</div>
+  </div>
+
+  <div class="gradient-legend">
+    <span>Baja</span>
+    <canvas id="gradientLegend" width="80" height="8"></canvas>
+    <span>Alta</span>
+  </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="tooltip">
+  <div class="tt-title"></div>
+  <div class="tt-exposure"></div>
+  <div class="tt-stats"></div>
+  <div class="tt-rationale"></div>
+</div>
+
+<script>
+
+// ── State ──────────────────────────────────────────────────────────────
+
+let data = [];
+let rects = [];
+let hovered = null;
+let mode = "pyme"; // "pyme" or "grande"
+
+// ── Exposure color scale ───────────────────────────────────────────────
+
+function exposureColor(score) {
+  if (score == null) return [128, 128, 128];
+  const t = Math.max(0, Math.min(10, score)) / 10;
+  let r, g, b;
+  if (t < 0.5) {
+    const s = t / 0.5;
+    r = Math.round(50 + s * 180);
+    g = Math.round(160 - s * 10);
+    b = Math.round(50 - s * 20);
+  } else {
+    const s = (t - 0.5) / 0.5;
+    r = Math.round(230 + s * 25);
+    g = Math.round(150 - s * 110);
+    b = Math.round(30 - s * 10);
+  }
+  return [r, g, b];
+}
+
+function exposureColorCSS(score, alpha) {
+  const [r, g, b] = exposureColor(score);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function getCostPct(d) {
+  return mode === "pyme" ? d.cost_pct_pyme : d.cost_pct_grande;
+}
+
+// ── Squarified treemap layout ──────────────────────────────────────────
+
+function squarify(items, x, y, w, h) {
+  if (items.length === 0) return [];
+  if (items.length === 1) {
+    return [{ ...items[0], rx: x, ry: y, rw: w, rh: h }];
+  }
+
+  const total = items.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return [];
+
+  const results = [];
+  let remaining = [...items];
+  let cx = x, cy = y, cw = w, ch = h;
+
+  while (remaining.length > 0) {
+    const remTotal = remaining.reduce((s, d) => s + d.value, 0);
+    const vertical = cw >= ch;
+    const side = vertical ? ch : cw;
+
+    let row = [remaining[0]];
+    let rowSum = remaining[0].value;
+
+    for (let i = 1; i < remaining.length; i++) {
+      const candidate = [...row, remaining[i]];
+      const candidateSum = rowSum + remaining[i].value;
+      if (worstAspect(candidate, candidateSum, side, remTotal, vertical ? cw : ch) <
+          worstAspect(row, rowSum, side, remTotal, vertical ? cw : ch)) {
+        row = candidate;
+        rowSum = candidateSum;
+      } else {
+        break;
+      }
+    }
+
+    const rowFraction = rowSum / remTotal;
+    const rowThickness = vertical ? cw * rowFraction : ch * rowFraction;
+
+    let offset = 0;
+    for (const item of row) {
+      const itemFraction = item.value / rowSum;
+      const itemLength = side * itemFraction;
+      if (vertical) {
+        results.push({ ...item, rx: cx, ry: cy + offset, rw: rowThickness, rh: itemLength });
+      } else {
+        results.push({ ...item, rx: cx + offset, ry: cy, rw: itemLength, rh: rowThickness });
+      }
+      offset += itemLength;
+    }
+
+    if (vertical) {
+      cx += rowThickness;
+      cw -= rowThickness;
+    } else {
+      cy += rowThickness;
+      ch -= rowThickness;
+    }
+
+    remaining = remaining.slice(row.length);
+  }
+
+  return results;
+}
+
+function worstAspect(row, rowSum, side, totalArea, availableExtent) {
+  const rowExtent = availableExtent * (rowSum / totalArea);
+  if (rowExtent === 0) return Infinity;
+  let worst = 0;
+  for (const item of row) {
+    const itemLen = side * (item.value / rowSum);
+    if (itemLen === 0) continue;
+    const aspect = Math.max(rowExtent / itemLen, itemLen / rowExtent);
+    if (aspect > worst) worst = aspect;
+  }
+  return worst;
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let dpr = window.devicePixelRatio || 1;
+
+const MARGIN = 12;
+const GAP = 1.5;
+
+function layout() {
+  const sidebarW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'));
+  const w = (window.innerWidth - sidebarW);
+  const h = window.innerHeight;
+
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + "px";
+  canvas.style.height = h + "px";
+
+  const tx = MARGIN;
+  const ty = MARGIN;
+  const tw = w - MARGIN * 2;
+  const th = h - MARGIN * 2;
+
+  const byCategory = {};
+  for (const d of data) {
+    const cat = d.category;
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(d);
+  }
+
+  const categories = Object.keys(byCategory).map(cat => ({
+    cat,
+    items: byCategory[cat].sort((a, b) => getCostPct(b) - getCostPct(a)),
+    value: byCategory[cat].reduce((s, d) => s + getCostPct(d), 0),
+  })).sort((a, b) => b.value - a.value);
+
+  const catRects = squarify(categories, tx, ty, tw, th);
+
+  rects = [];
+  for (const cr of catRects) {
+    const innerGap = GAP;
+    const items = cr.items.map(d => ({ ...d, value: getCostPct(d) }));
+    const innerRects = squarify(items,
+      cr.rx + innerGap, cr.ry + innerGap,
+      cr.rw - innerGap * 2, cr.rh - innerGap * 2
+    );
+    for (const ir of innerRects) {
+      rects.push(ir);
+    }
+  }
+}
+
+function draw() {
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#0a0a0f";
+  ctx.fillRect(0, 0, w / dpr, h / dpr);
+
+  for (const r of rects) {
+    const isHovered = r === hovered;
+
+    const g = GAP / 2;
+    const rx = r.rx + g;
+    const ry = r.ry + g;
+    const rw = r.rw - g * 2;
+    const rh = r.rh - g * 2;
+
+    if (rw <= 0 || rh <= 0) continue;
+
+    const fillAlpha = isHovered ? 0.8 : 0.5;
+    ctx.fillStyle = exposureColorCSS(r.exposure, fillAlpha);
+    ctx.fillRect(rx, ry, rw, rh);
+
+    if (isHovered) {
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rx, ry, rw, rh);
+    }
+
+    const minW = 50;
+    const minH = 18;
+    if (rw > minW && rh > minH) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(rx + 4, ry + 2, rw - 8, rh - 4);
+      ctx.clip();
+
+      const fontSize = Math.min(13, Math.max(9, Math.min(rw / 10, rh / 3)));
+      ctx.font = `500 ${fontSize}px -apple-system, system-ui, sans-serif`;
+      ctx.fillStyle = isHovered ? "#fff" : "rgba(255,255,255,0.85)";
+      ctx.textBaseline = "top";
+      ctx.fillText(r.title, rx + 5, ry + 4);
+
+      if (rh > 34 && rw > 60) {
+        const info = (r.exposure != null ? r.exposure + "/10" : "") +
+                     " · " + getCostPct(r).toFixed(1) + "%";
+        ctx.font = `400 ${Math.max(8, fontSize - 2)}px -apple-system, system-ui, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText(info, rx + 5, ry + 4 + fontSize + 2);
+      }
+
+      ctx.restore();
+    }
+  }
+}
+
+function hitTest(mx, my) {
+  const sidebarW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'));
+  const cx = mx - sidebarW;
+  const cy = my;
+  for (let i = rects.length - 1; i >= 0; i--) {
+    const r = rects[i];
+    if (cx >= r.rx && cx < r.rx + r.rw && cy >= r.ry && cy < r.ry + r.rh) {
+      return r;
+    }
+  }
+  return null;
+}
+
+function showTooltip(d, mx, my) {
+  const tt = document.getElementById("tooltip");
+
+  tt.querySelector(".tt-title").textContent = d.title;
+
+  const score = d.exposure != null ? d.exposure : null;
+  if (score != null) {
+    const barWidth = score * 10;
+    const color = exposureColorCSS(score, 1);
+    tt.querySelector(".tt-exposure").innerHTML =
+      `<span style="color:${color};font-weight:600;">Exposición IA: ${score}/10</span>` +
+      `<div style="margin-top:3px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;">` +
+      `<div style="height:100%;width:${barWidth}%;background:${color};border-radius:2px;"></div></div>`;
+  } else {
+    tt.querySelector(".tt-exposure").innerHTML = "";
+  }
+
+  const costPct = getCostPct(d);
+  const modeLabel = mode === "pyme" ? "PYME" : "Gran Empresa";
+
+  tt.querySelector(".tt-stats").innerHTML = `
+    <span class="label">Área funcional</span><span class="value">${d.category_label || '—'}</span>
+    <span class="label">Coste operativo (${modeLabel})</span><span class="value">${costPct.toFixed(1)}%</span>
+    <span class="label">Exposición IA</span><span class="value">${d.exposure != null ? d.exposure + '/10' : '—'}</span>
+    <span class="label">Facilidad de implementación</span><span class="value">${d.readiness != null ? d.readiness + '/10' : '—'}</span>
+  `;
+
+  let rationale = "";
+  if (d.exposure_rationale) {
+    rationale += `<strong>Exposición:</strong> ${d.exposure_rationale}`;
+  }
+  if (d.readiness_rationale) {
+    rationale += `<br><br><strong>Implementación:</strong> ${d.readiness_rationale}`;
+  }
+  tt.querySelector(".tt-rationale").innerHTML = rationale;
+
+  const pad = 16;
+  let tx = mx + pad;
+  let ty = my - pad;
+  if (tx + 380 > window.innerWidth) tx = mx - 380 - pad;
+  if (ty < 10) ty = my + pad;
+  if (ty + 260 > window.innerHeight) ty = my - 260;
+
+  tt.style.left = tx + "px";
+  tt.style.top = ty + "px";
+  tt.classList.add("visible");
+}
+
+function hideTooltip() {
+  document.getElementById("tooltip").classList.remove("visible");
+}
+
+// ── Toggle ─────────────────────────────────────────────────────────────
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll(".toggle-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === m);
+  });
+  computeStats();
+  layout();
+  draw();
+}
+
+// ── Sidebar stats ──────────────────────────────────────────────────────
+
+function computeStats() {
+  const totalProcs = data.length;
+  const totalCost = data.reduce((s, d) => s + getCostPct(d), 0);
+
+  // Cost-weighted average exposure
+  let weightedSum = 0, weightedCount = 0;
+  for (const d of data) {
+    if (d.exposure != null) {
+      const cost = getCostPct(d);
+      weightedSum += d.exposure * cost;
+      weightedCount += cost;
+    }
+  }
+  const weightedAvg = weightedCount > 0 ? weightedSum / weightedCount : 0;
+
+  // Cost-weighted readiness
+  let readySum = 0, readyCount = 0;
+  for (const d of data) {
+    if (d.readiness != null) {
+      const cost = getCostPct(d);
+      readySum += d.readiness * cost;
+      readyCount += cost;
+    }
+  }
+  const readinessAvg = readyCount > 0 ? readySum / readyCount : 0;
+
+  // Histogram: cost by exposure score 0-10
+  const histogram = new Array(11).fill(0);
+  for (const d of data) {
+    if (d.exposure != null) {
+      histogram[d.exposure] += getCostPct(d);
+    }
+  }
+
+  // Tiers
+  const tiers = [
+    { name: "Mínima", range: [0, 1], color: exposureColorCSS(0.5, 1) },
+    { name: "Baja", range: [2, 3], color: exposureColorCSS(2.5, 1) },
+    { name: "Moderada", range: [4, 5], color: exposureColorCSS(4.5, 1) },
+    { name: "Alta", range: [6, 7], color: exposureColorCSS(6.5, 1) },
+    { name: "Muy alta", range: [8, 10], color: exposureColorCSS(9, 1) },
+  ];
+  for (const tier of tiers) {
+    tier.count = 0;
+    tier.cost = 0;
+    for (const d of data) {
+      if (d.exposure != null &&
+          d.exposure >= tier.range[0] && d.exposure <= tier.range[1]) {
+        tier.count++;
+        tier.cost += getCostPct(d);
+      }
+    }
+    tier.pct = totalCost > 0 ? (tier.cost / totalCost * 100) : 0;
+  }
+
+  // Exposure by area
+  const areaCosts = {};
+  const areaExposure = {};
+  const areaLabels = {};
+  for (const d of data) {
+    const cat = d.category;
+    if (!areaCosts[cat]) { areaCosts[cat] = 0; areaExposure[cat] = 0; }
+    areaLabels[cat] = d.category_label;
+    const cost = getCostPct(d);
+    areaCosts[cat] += cost;
+    if (d.exposure != null) {
+      areaExposure[cat] += d.exposure * cost;
+    }
+  }
+  const areas = Object.keys(areaCosts).map(cat => ({
+    cat,
+    label: areaLabels[cat],
+    avg: areaCosts[cat] > 0 ? areaExposure[cat] / areaCosts[cat] : 0,
+  })).sort((a, b) => b.avg - a.avg);
+
+  // Render
+  document.getElementById("statTotal").textContent = totalProcs;
+  document.getElementById("statAvgExposure").innerHTML =
+    `<span style="color:${exposureColorCSS(weightedAvg, 1)}">${weightedAvg.toFixed(1)}</span>`;
+  document.getElementById("statReadiness").innerHTML =
+    `<span style="color:${exposureColorCSS(readinessAvg, 1)}">${readinessAvg.toFixed(1)}</span>`;
+
+  // Histogram
+  const maxHist = Math.max(...histogram);
+  const histEl = document.getElementById("histogram");
+  histEl.innerHTML = histogram.map((count, i) => {
+    const h = maxHist > 0 ? (count / maxHist * 100) : 0;
+    return `<div class="bar" style="height:${Math.max(2, h)}%;background:${exposureColorCSS(i, 0.7)}" title="${i}: ${count.toFixed(1)}%"></div>`;
+  }).join("");
+
+  // Tier breakdown
+  const tierEl = document.getElementById("tierBar");
+  tierEl.innerHTML = tiers.map(t =>
+    `<div class="tier-row">
+      <div class="tier-color" style="background:${t.color}"></div>
+      <span class="tier-name">${t.name} (${t.range[0]}-${t.range[1]})</span>
+      <span class="tier-procs">${t.count}</span>
+      <span class="tier-pct">${t.pct.toFixed(0)}%</span>
+    </div>`
+  ).join("");
+
+  // Exposure by area
+  const areaChartEl = document.getElementById("areaChart");
+  areaChartEl.innerHTML = areas.map(a => {
+    const pct = a.avg / 10 * 100;
+    // Truncate long labels
+    let label = a.label;
+    if (label.length > 12) label = label.substring(0, 11) + "…";
+    return `<div class="hbar-row">
+      <span class="hbar-label">${label}</span>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${exposureColorCSS(a.avg, 0.8)}"></div></div>
+      <span class="hbar-val">${a.avg.toFixed(1)}</span>
+    </div>`;
+  }).join("");
+}
+
+// ── Events ─────────────────────────────────────────────────────────────
+
+canvas.addEventListener("mousemove", (e) => {
+  const hit = hitTest(e.clientX, e.clientY);
+  if (hit !== hovered) {
+    hovered = hit;
+    draw();
+  }
+  if (hovered) {
+    showTooltip(hovered, e.clientX, e.clientY);
+    canvas.style.cursor = "pointer";
+  } else {
+    hideTooltip();
+    canvas.style.cursor = "default";
+  }
+});
+
+canvas.addEventListener("mouseleave", () => {
+  hovered = null;
+  hideTooltip();
+  draw();
+});
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  layout();
+  draw();
+}
+
+// ── Legend gradient ────────────────────────────────────────────────────
+
+function drawGradientLegend() {
+  const c = document.getElementById("gradientLegend");
+  const gctx = c.getContext("2d");
+  for (let x = 0; x < 80; x++) {
+    const score = (x / 79) * 10;
+    gctx.fillStyle = exposureColorCSS(score, 1);
+    gctx.fillRect(x, 0, 1, 8);
+  }
+}
+
+// ── Load ───────────────────────────────────────────────────────────────
+
+fetch("data.json")
+  .then(r => r.json())
+  .then(d => {
+    data = d;
+    computeStats();
+    drawGradientLegend();
+    resize();
+  });
+
+window.addEventListener("resize", resize);
+</script>
+</body>
+</html>
